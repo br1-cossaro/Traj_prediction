@@ -1,0 +1,33 @@
+_target_: vehicle_traj.models.vehicle_transformer.VehicleTrajectoryTransformer
+
+d_model: 128
+num_layers: 3
+num_heads: 4
+dim_feedforward: 256
+max_time: ${data.num_frames}
+max_agents: ${data.max_agents}
+obs_len: ${data.obs_len}
+num_modes: 1
+dropout: 0.1
+
+use_velocity: ${inputs.use_velocity}
+use_heading: ${inputs.use_heading}
+use_type: ${inputs.use_type}
+type_vocab_size: 16
+
+use_map: ${inputs.use_map}
+use_traffic_lights: ${inputs.use_traffic_lights}
+
+# How to inject map / traffic-light context:
+# - append: concatenate tokens to the transformer sequence (baseline behavior)
+# - cross_attn: keep agent sequence fixed and use cross-attention to map/tl tokens
+map_integration: append
+tl_integration: append
+
+# Map / traffic-light categorical id handling.
+# Default is backward compatible (treat ids as floats, as in earlier experiments).
+map_use_polyline_encoder: false
+map_use_type_embedding: false
+map_type_vocab_size: 64
+tl_use_state_embedding: false
+tl_state_vocab_size: 16

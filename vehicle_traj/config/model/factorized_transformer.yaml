@@ -1,0 +1,36 @@
+_target_: vehicle_traj.models.factorized_transformer.FactorizedTrajectoryTransformer
+
+d_model: 128
+num_layers: 3
+num_heads: 4
+dim_feedforward: 256
+max_time: ${data.num_frames}
+max_agents: ${data.max_agents}
+obs_len: ${data.obs_len}
+
+num_modes: 1
+dropout: 0.1
+
+use_velocity: ${inputs.use_velocity}
+use_heading: ${inputs.use_heading}
+use_type: ${inputs.use_type}
+type_vocab_size: 16
+
+use_map: ${inputs.use_map}
+use_traffic_lights: ${inputs.use_traffic_lights}
+
+# Map / traffic lights (when enabled in inputs).
+# These mirror `vehicle_transformer` options for fair comparisons.
+map_feat_dim: 3
+traffic_light_feat_dim: 3
+
+map_use_polyline_encoder: false
+map_use_type_embedding: false
+map_type_vocab_size: 64
+
+tl_use_state_embedding: false
+tl_state_vocab_size: 16
+
+# Must be >= the dataloader top-k (data.map_max_polylines / data.tl_max_lights).
+max_map_tokens: 256
+max_tl_tokens: 64

@@ -1,0 +1,25 @@
+_target_: vehicle_traj.modules.dataset.waymo_scene.WaymoSceneDataModule
+
+# Use env vars so the same config works across machines.
+root: ${oc.env:WOMD_NPZ_DIR,""}
+split_path: ${oc.env:WOMD_SPLIT_PATH,""}
+
+batch_size: 4
+num_workers: 2
+val_ratio: 0.2
+seed: ${seed}
+
+max_agents: 128
+num_frames: 91
+obs_len: 11
+future_len: 80
+relative_to_ego: true
+
+# Recommended defaults for map50:
+# we keep only nearby / top-k map & traffic-light tokens to avoid far-away context dominating scale.
+map_max_radius_m: 80.0
+map_max_polylines: 128
+tl_max_radius_m: 200.0
+tl_max_lights: 64
+# Use last K frames of traffic lights (temporal context).
+tl_history_frames: 5

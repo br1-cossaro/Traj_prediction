@@ -1,0 +1,9 @@
+prediction_target: all_agents  # all_agents | ego_only
+
+# Optional: filter agents by valid frame coverage (0 = disabled).
+min_obs_frames: 0  # require >= this many observed frames (out of obs_len)
+min_fut_frames: 0  # require >= this many future frames (out of future_len)
+
+# How to fill future slots in the input sequence before predicting deltas:
+# - last_obs: repeat last observed position
+placeholder_strategy: last_obs

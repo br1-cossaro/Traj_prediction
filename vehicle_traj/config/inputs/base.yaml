@@ -1,0 +1,7 @@
+use_xy: true
+use_velocity: false
+use_heading: false
+use_type: false
+use_map: false
+use_traffic_lights: false
+

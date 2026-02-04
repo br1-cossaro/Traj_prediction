@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pt
+*.npz
+*.csv
+*.png
+*.pdf
+*.log
+runs/
+results/
+logs/
+.env
+.vscode/
+.DS_Store

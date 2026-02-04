@@ -1,0 +1,22 @@
+_target_: vehicle_traj.models.gru_interaction.VehicleGRUInteraction
+
+d_model: 128
+gru_layers: 1
+
+interaction_layers: 2
+num_heads: 4
+dim_feedforward: 256
+
+max_time: ${data.num_frames}
+max_agents: ${data.max_agents}
+obs_len: ${data.obs_len}
+future_len: ${data.future_len}
+
+num_modes: 1
+dropout: 0.1
+
+use_velocity: ${inputs.use_velocity}
+use_heading: ${inputs.use_heading}
+use_type: ${inputs.use_type}
+type_vocab_size: 16
+
