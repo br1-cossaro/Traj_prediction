@@ -381,7 +381,7 @@ class FactorizedTrajectoryTransformer(nn.Module):
                 raise ValueError(f"agent_type must be [B,N], got {tuple(agent_type.shape)}")
             x = x + self.type_emb(agent_type.clamp(min=0))[:, None, :, :]
 
-        # Optional: append map and traffic-light tokens as "extra agents".
+        #  append map and traffic-light tokens as "extra agents".
         map_x = None
         map_valid = None
         if self.cfg.use_map:

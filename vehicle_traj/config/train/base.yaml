@@ -7,7 +7,7 @@ ckpt_every: 1
 # Multimodal training (when model.num_modes > 1)
 w_mode_ce: 0.1
 
-# Checkpoint selection / early stopping (recommended for multimodal comparisons)
+# Checkpoint selection / early stopping 
 # - For multimodal forecasting, prefer `val_minfde` as the selection metric.
 # - For unimodal runs, `val_minfde == val_fde` so this is still consistent.
 select_metric: val_minfde
@@ -16,7 +16,7 @@ save_best: true
 early_stop_patience: 0  # 0 disables early stopping
 early_stop_min_delta: 0.0
 
-# Optional: resume and/or write outputs into a specific directory.
+# resume and/or write outputs into a specific directory.
 # - If `run_dir` is set, `vehicle_traj/train.py` writes `metrics.csv` and `checkpoints/` there.
 # - If `resume_from` is set, it loads model/optimizer state and continues from `epoch+1`.
 run_dir: ""

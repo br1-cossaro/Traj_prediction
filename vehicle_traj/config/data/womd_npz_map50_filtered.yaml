@@ -15,7 +15,7 @@ obs_len: 11
 future_len: 80
 relative_to_ego: true
 
-# Recommended defaults for map50:
+# defaults for map50:
 # we keep only nearby / top-k map & traffic-light tokens to avoid far-away context dominating scale.
 map_max_radius_m: 80.0
 map_max_polylines: 128
@@ -23,3 +23,5 @@ tl_max_radius_m: 200.0
 tl_max_lights: 64
 # Use last K frames of traffic lights (temporal context).
 tl_history_frames: 5
+agent_map_feat: false
+agent_map_feat_dim: 4

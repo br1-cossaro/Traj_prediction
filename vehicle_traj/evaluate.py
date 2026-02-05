@@ -160,16 +160,17 @@ def main(cfg: DictConfig) -> None:
 
             with autocast(device_type=device.type, enabled=amp, dtype=torch.float16):
                 out = model(
-                    positions=inputs,
-                    valid_mask=batch["valid_mask"],
-                    velocity=batch.get("velocity"),
-                    heading=batch.get("heading"),
-                    agent_type=batch.get("agent_type"),
-                    map_tokens=map_tokens,
-                    map_key_padding_mask=batch.get("map_key_padding_mask"),
-                    roadgraph_static=roadgraph_static,
-                    padding_mask_static=padding_mask_static,
-                    tl_tokens=tl_tokens,
+                positions=inputs,
+                valid_mask=batch["valid_mask"],
+                velocity=batch.get("velocity"),
+                heading=batch.get("heading"),
+                agent_type=batch.get("agent_type"),
+                agent_map_feat=batch.get("agent_map_feat"),
+                map_tokens=map_tokens,
+                map_key_padding_mask=batch.get("map_key_padding_mask"),
+                roadgraph_static=roadgraph_static,
+                padding_mask_static=padding_mask_static,
+                tl_tokens=tl_tokens,
                     tl_key_padding_mask=batch.get("tl_key_padding_mask"),
                 )
                 pred_deltas = out.deltas

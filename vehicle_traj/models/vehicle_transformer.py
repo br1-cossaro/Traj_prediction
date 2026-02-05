@@ -70,7 +70,7 @@ class VehicleTrajectoryTransformer(nn.Module):
       - uses only `positions` [B, F, N, 2]
       - predicts per-token deltas [B, F, N, 2]
 
-    Optional (configurable) conditioning features:
+     configurable conditioning features:
       - `velocity` [B, F, N, 2]
       - `heading`  [B, F, N, 1] (rad) or [B, F, N, 2]
       - `agent_type` [B, N] int
@@ -110,6 +110,8 @@ class VehicleTrajectoryTransformer(nn.Module):
         tl_time_vocab_size: int = 16,
         map_integration: str = "append",
         tl_integration: str = "append",
+        use_agent_map_feat: bool = False,
+        agent_map_feat_dim: int = 4,
     ) -> None:
         super().__init__()
         self.d_model = int(d_model)
@@ -135,6 +137,8 @@ class VehicleTrajectoryTransformer(nn.Module):
         self.tl_time_vocab_size = int(tl_time_vocab_size)
         self.map_integration = str(map_integration)
         self.tl_integration = str(tl_integration)
+        self.use_agent_map_feat = bool(use_agent_map_feat)
+        self.agent_map_feat_dim = int(agent_map_feat_dim)
         valid_poly_enc = {"mean", "attn"}
         if self.map_polyline_encoder not in valid_poly_enc:
             raise ValueError(f"map_polyline_encoder must be one of {sorted(valid_poly_enc)}, got {self.map_polyline_encoder!r}")
@@ -148,6 +152,7 @@ class VehicleTrajectoryTransformer(nn.Module):
         self.pos_proj = nn.Linear(2, self.d_model)
         self.vel_proj = nn.Linear(2, self.d_model) if self.use_velocity else None
         self.heading_proj = HeadingProjection(self.d_model) if self.use_heading else None
+        self.agent_map_proj = nn.Linear(self.agent_map_feat_dim, self.d_model) if self.use_agent_map_feat else None
         self.type_emb = nn.Embedding(int(type_vocab_size), self.d_model) if self.use_type else None
 
         self.time_emb = nn.Embedding(self.max_time, self.d_model)
@@ -173,7 +178,6 @@ class VehicleTrajectoryTransformer(nn.Module):
             else None
         )
 
-        # Optional cross-attention integration for map/traffic-light tokens:
         # keeps the agent token sequence length fixed (F*N)
         # injects map/tl context via a separate attention op
         self._map_ctx_attn: Optional[nn.MultiheadAttention] = None
@@ -413,6 +417,7 @@ class VehicleTrajectoryTransformer(nn.Module):
         velocity: Optional[torch.Tensor] = None,  # [B, F, N, 2]
         heading: Optional[torch.Tensor] = None,  # [B, F, N, 1|2]
         agent_type: Optional[torch.Tensor] = None,  # [B, N]
+        agent_map_feat: Optional[torch.Tensor] = None,  # [B, N, Dm]
         map_tokens: Optional[torch.Tensor] = None,  # [B, S_map, D_map]
         map_key_padding_mask: Optional[torch.Tensor] = None,  # [B, S_map] True=pad
         roadgraph_static: Optional[torch.Tensor] = None,  # [B, G, P, C]
@@ -457,6 +462,17 @@ class VehicleTrajectoryTransformer(nn.Module):
                 raise ValueError(f"agent_type must be [B,N], got {tuple(agent_type.shape)}")
             type_tok = self.type_emb(agent_type.clamp(min=0))
             token = token + type_tok[:, None, :, :]
+
+        if self.use_agent_map_feat:
+            if agent_map_feat is None:
+                raise ValueError("use_agent_map_feat=true but agent_map_feat is None")
+            if agent_map_feat.shape[:2] != (B, N):
+                raise ValueError(f"agent_map_feat must be [B,N,D], got {tuple(agent_map_feat.shape)}")
+            if agent_map_feat.shape[-1] != self.agent_map_feat_dim:
+                raise ValueError(f"agent_map_feat last dim must be {self.agent_map_feat_dim}, got {agent_map_feat.shape[-1]}")
+            if self.agent_map_proj is None:
+                raise RuntimeError("agent_map_proj missing despite use_agent_map_feat=true")
+            token = token + self.agent_map_proj(agent_map_feat)[:, None, :, :]
 
         token = self.dropout(token)
 

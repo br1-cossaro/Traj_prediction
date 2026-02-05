@@ -352,6 +352,7 @@ def main(cfg: DictConfig) -> None:
                 velocity=batch.get("velocity"),
                 heading=batch.get("heading"),
                 agent_type=batch.get("agent_type"),
+                agent_map_feat=batch.get("agent_map_feat"),
                 map_tokens=map_tokens,
                 map_key_padding_mask=batch.get("map_key_padding_mask"),
                 roadgraph_static=roadgraph_static,

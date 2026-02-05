@@ -43,6 +43,8 @@ class WaymoSceneDataModule:
     tl_max_radius_m: float = 0.0
     tl_max_lights: int = 64
     tl_history_frames: int = 1
+    agent_map_feat: bool = False
+    agent_map_feat_dim: int = 4
 
     def _add_map_and_signal_tokens(self, base: dict, batch) -> dict:
         """
@@ -151,6 +153,77 @@ class WaymoSceneDataModule:
             else:
                 base["map_tokens"] = map_tokens
                 base["map_key_padding_mask"] = map_key_padding_mask
+
+            # Optional per-agent map features (nearest polyline geometry).
+            if bool(getattr(self, "agent_map_feat", False)):
+                if int(getattr(self, "agent_map_feat_dim", 4)) != 4:
+                    raise ValueError("agent_map_feat_dim must be 4 for the current implementation")
+                positions = base["positions"]  # [B,F,N,2]
+                valid_mask = base["valid_mask"]  # [B,F,N]
+                t_ref = max(0, min(int(self.obs_len) - 1, int(positions.shape[1]) - 1))
+                pos_now = positions[:, t_ref]  # [B,N,2]
+
+                # Agent velocity (approx) from last two obs frames.
+                t_prev = max(0, t_ref - 1)
+                pos_prev = positions[:, t_prev]
+                vel = pos_now - pos_prev
+                vel_valid = valid_mask[:, t_ref] & valid_mask[:, t_prev]
+                vel = vel * vel_valid.unsqueeze(-1).to(dtype=vel.dtype)
+                v_norm = torch.norm(vel, dim=-1, keepdim=True).clamp(min=1e-6)
+                v_hat = vel / v_norm
+
+                rg = base["roadgraph_static"]  # [B,G,P,C]
+                pm = base["padding_mask_static"]  # [B,G,P], True = padding
+                valid = ~pm  # [B,G,P]
+                valid_f = valid.to(dtype=rg.dtype).unsqueeze(-1)
+                denom = valid_f.sum(dim=2).clamp(min=1.0)
+                centroid = (rg[:, :, :, 0:2] * valid_f).sum(dim=2) / denom  # [B,G,2]
+
+                # Direction: last valid point - first valid point.
+                counts = valid.sum(dim=2)  # [B,G]
+                idx_first = valid.to(dtype=torch.float32).argmax(dim=2)  # [B,G]
+                idx_last = (counts - 1).clamp(min=0)
+                idx_first_g = idx_first[..., None, None].expand(-1, -1, 1, 2)
+                idx_last_g = idx_last[..., None, None].expand(-1, -1, 1, 2)
+                first_pt = torch.gather(rg[:, :, :, 0:2], dim=2, index=idx_first_g).squeeze(2)
+                last_pt = torch.gather(rg[:, :, :, 0:2], dim=2, index=idx_last_g).squeeze(2)
+                direction = last_pt - first_pt
+                dir_norm = torch.norm(direction, dim=-1, keepdim=True).clamp(min=1e-6)
+                dir_u = direction / dir_norm
+                poly_valid = counts > 0  # [B,G]
+
+                # Nearest polyline per agent.
+                delta = pos_now[:, :, None, :] - centroid[:, None, :, :]  # [B,N,G,2]
+                dist = torch.norm(delta, dim=-1)  # [B,N,G]
+                invalid = ~poly_valid[:, None, :].expand_as(dist)
+                dist[invalid] = float("inf")
+                idx = dist.argmin(dim=2)  # [B,N]
+
+                idx_exp = idx[..., None, None]
+                cent_sel = torch.gather(
+                    centroid[:, None, :, :].expand(-1, pos_now.shape[1], -1, 2),
+                    dim=2,
+                    index=idx_exp.expand(-1, -1, 1, 2),
+                ).squeeze(2)
+                dir_sel = torch.gather(
+                    dir_u[:, None, :, :].expand(-1, pos_now.shape[1], -1, 2),
+                    dim=2,
+                    index=idx_exp.expand(-1, -1, 1, 2),
+                ).squeeze(2)
+                poly_valid_sel = torch.gather(poly_valid, dim=1, index=idx)  # [B,N]
+
+                u = dir_sel
+                u_perp = torch.stack([-u[..., 1], u[..., 0]], dim=-1)
+                rel = pos_now - cent_sel
+                long = (rel * u).sum(dim=-1)
+                lat = (rel * u_perp).sum(dim=-1)
+                cos_align = (v_hat * u).sum(dim=-1)
+                sin_align = (v_hat * u_perp).sum(dim=-1)
+
+                feat = torch.stack([long, lat, cos_align, sin_align], dim=-1)  # [B,N,4]
+                valid_agents = valid_mask[:, t_ref] & poly_valid_sel
+                feat = feat * valid_agents.unsqueeze(-1).to(dtype=feat.dtype)
+                base["agent_map_feat"] = feat
 
         # --- Traffic lights (dynamic_map_states lane_states) ---
         if any("traffic_lights" in item for item in batch):

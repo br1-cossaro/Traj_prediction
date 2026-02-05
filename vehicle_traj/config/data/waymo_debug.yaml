@@ -13,9 +13,12 @@ obs_len: 11
 future_len: 80
 relative_to_ego: true
 
-# Optional: filter map/traffic-light tokens after ego-centering.
+# filter map/traffic-light tokens after ego-centering.
 # Keep radius <= 0 to disable.
 map_max_radius_m: 0.0
 map_max_polylines: 256
 tl_max_radius_m: 0.0
 tl_max_lights: 64
+tl_history_frames: 1
+agent_map_feat: false
+agent_map_feat_dim: 4

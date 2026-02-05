@@ -31,3 +31,5 @@ map_use_type_embedding: false
 map_type_vocab_size: 64
 tl_use_state_embedding: false
 tl_state_vocab_size: 16
+use_agent_map_feat: false
+agent_map_feat_dim: 4

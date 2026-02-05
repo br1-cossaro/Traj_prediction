@@ -32,3 +32,5 @@ tl_use_state_embedding: true
 tl_state_vocab_size: 16
 tl_use_time_embedding: true
 tl_time_vocab_size: 16
+use_agent_map_feat: false
+agent_map_feat_dim: 4

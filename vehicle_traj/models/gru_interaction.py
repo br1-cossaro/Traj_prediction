@@ -222,7 +222,7 @@ class VehicleGRUInteraction(nn.Module):
         _, h_n = self.gru(x)  # h_n: [L, B*N, D]
         h = h_n[-1].view(B, N, self.cfg.d_model)  # [B,N,D]
 
-        # Optional interaction across agents at the last observed timestep.
+        #  interaction across agents at the last observed timestep.
         if self.interaction is not None:
             kpm_agent: Optional[torch.Tensor] = None
             if valid_mask is not None:

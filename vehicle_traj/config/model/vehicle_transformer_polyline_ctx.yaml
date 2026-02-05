@@ -28,10 +28,12 @@ map_use_polyline_encoder: true
 map_polyline_encoder: attn
 map_polyline_max_points: 20
 
-# Treat categorical ids as embeddings (recommended with polyline encoder).
+# Treat categorical ids as embeddings (usful with polyline encoder).
 map_use_type_embedding: true
 map_type_vocab_size: 64
 tl_use_state_embedding: true
 tl_state_vocab_size: 16
 tl_use_time_embedding: true
 tl_time_vocab_size: 16
+use_agent_map_feat: false
+agent_map_feat_dim: 4
