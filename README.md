@@ -1,6 +1,6 @@
 # Trajectory Prediction Model (vehicle_traj)
 
-Minimal shareable code snapshot for the **vehicle_traj** pipeline.
+Code snapshot for the **vehicle_traj** pipeline.
 This repo only contains the model code + dataset loader required to train/evaluate.
 
 ## Contents
