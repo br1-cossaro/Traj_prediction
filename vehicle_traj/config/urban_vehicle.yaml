@@ -1,0 +1,18 @@
+defaults:
+  - data: womd_mapfull_filtered
+  - model: urban_transformer
+  - train: base
+  - task: base
+  - inputs: base
+  - _self_
+
+seed: 0
+device: cuda
+
+eval:
+  checkpoint: ???
+  amp: false
+
+hydra:
+  run:
+    dir: ${oc.env:TP_RUNS_DIR,trajectory_prediction/results}/vehicle_traj/${now:%Y-%m-%d}/${now:%H-%M-%S}

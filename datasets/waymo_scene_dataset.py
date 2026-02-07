@@ -184,7 +184,7 @@ class WaymoSceneDataset(Dataset):
                     except Exception:
                         pass
 
-                # some other options (support both `velocity` and WOMD-style `velocities`)
+                # some other options (support both `velocity` and WOMD-style velocities)
                 if "velocity" in d:
                     extras["velocity"] = d["velocity"][scene_idx]
                 elif "velocities" in d:

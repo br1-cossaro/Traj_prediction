@@ -6,6 +6,7 @@ import os
 import sys
 from pathlib import Path
 
+import numpy as np
 import torch
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
@@ -105,6 +106,8 @@ def main() -> None:
     ap.add_argument("--tl-max-lights", type=int, default=None, help="Override cfg.data.tl_max_lights.")
     ap.add_argument("--min-obs-frames", type=int, default=-1, help="Override cfg.task.min_obs_frames if >=0.")
     ap.add_argument("--min-fut-frames", type=int, default=-1, help="Override cfg.task.min_fut_frames if >=0.")
+    ap.add_argument("--dump-path", default="", help="If set, dump predictions/GT to .npz for the first N batches.")
+    ap.add_argument("--dump-limit", type=int, default=10, help="Max batches to dump when --dump-path is set.")
     args = ap.parse_args()
 
     ckpt_path = _as_path(args.checkpoint)
@@ -155,6 +158,10 @@ def main() -> None:
     amp = bool(cfg.eval.amp) and device.type == "cuda"
 
     totals = {"ade": 0.0, "fde": 0.0, "minade": 0.0, "minfde": 0.0, "count": 0}
+    dump_samples: list[dict] = []
+    dump_enabled = bool(str(args.dump_path).strip())
+    dump_limit = max(int(args.dump_limit), 0)
+
     with torch.inference_mode():
         for batch_i, batch in enumerate(loader):
             if int(args.max_batches) > 0 and batch_i >= int(args.max_batches):
@@ -207,18 +214,18 @@ def main() -> None:
                 tl_tokens[..., 0:2] = (tl_tokens[..., 0:2] - m) / s
 
             with autocast(device_type=device.type, enabled=amp, dtype=torch.float16):
-            out = model(
-                positions=inputs,
-                valid_mask=batch["valid_mask"],
-                velocity=batch.get("velocity"),
-                heading=batch.get("heading"),
-                agent_type=batch.get("agent_type"),
-                agent_map_feat=batch.get("agent_map_feat"),
-                map_tokens=map_tokens,
-                map_key_padding_mask=batch.get("map_key_padding_mask"),
-                roadgraph_static=roadgraph_static,
-                padding_mask_static=padding_mask_static,
-                tl_tokens=tl_tokens,
+                out = model(
+                    positions=inputs,
+                    valid_mask=batch["valid_mask"],
+                    velocity=batch.get("velocity"),
+                    heading=batch.get("heading"),
+                    agent_type=batch.get("agent_type"),
+                    agent_map_feat=batch.get("agent_map_feat"),
+                    map_tokens=map_tokens,
+                    map_key_padding_mask=batch.get("map_key_padding_mask"),
+                    roadgraph_static=roadgraph_static,
+                    padding_mask_static=padding_mask_static,
+                    tl_tokens=tl_tokens,
                     tl_key_padding_mask=batch.get("tl_key_padding_mask"),
                 )
                 pred_deltas = out.deltas
@@ -257,6 +264,24 @@ def main() -> None:
             totals["minfde"] += float(minfde.item()) * bs
             totals["count"] += bs
 
+            if dump_enabled and batch_i < dump_limit:
+                # Normalize outputs to a consistent shape for dumping
+                if pred_deltas.dim() == 4:
+                    # [B, T, N, 2] -> add mode dim =1
+                    pred_modes = pred_future_m.unsqueeze(1)  # [B,1,T,N,2]
+                else:
+                    pred_modes = pred_future_modes_m  # [B,M,T,N,2]
+
+                dump_samples.append(
+                    {
+                        "scenario_id": batch.get("scenario_id"),
+                        "ego_idx": batch.get("ego_idx").cpu().numpy(),
+                        "pred_modes": pred_modes.cpu().numpy(),
+                        "gt": tgt_future_m.cpu().numpy(),
+                        "mask": mask.cpu().numpy(),
+                    }
+                )
+
     denom = max(int(totals["count"]), 1)
     out = {
         "checkpoint": str(ckpt_path),
@@ -279,6 +304,12 @@ def main() -> None:
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(json.dumps(out, indent=2), encoding="utf-8")
         print(f"Wrote: {p}")
+
+    if dump_enabled and dump_samples:
+        dump_path = _as_path(args.dump_path)
+        dump_path.parent.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(dump_path, samples=np.array(dump_samples, dtype=object))
+        print(f"Wrote preds: {dump_path}")
 
 
 if __name__ == "__main__":

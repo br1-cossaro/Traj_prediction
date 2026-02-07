@@ -1,0 +1,27 @@
+_target_: vehicle_traj.modules.dataset.waymo_scene.WaymoSceneDataModule
+
+# Environment-variable driven paths so it works locally and on Grid5000.
+root: ${oc.env:WOMD_NPZ_DIR,""}
+split_path: ${oc.env:WOMD_SPLIT_PATH,""}
+
+batch_size: 4
+num_workers: 2
+val_ratio: 0.2
+seed: ${seed}
+
+max_agents: 128
+num_frames: 91
+obs_len: 11
+future_len: 80
+relative_to_ego: true
+
+# Spatial filtering to keep context local.
+map_max_radius_m: 80.0
+map_max_polylines: 128
+tl_max_radius_m: 200.0
+tl_max_lights: 64
+tl_history_frames: 5
+
+# Optional agent-to-map features (distance/heading); keep off by default.
+agent_map_feat: false
+agent_map_feat_dim: 4
